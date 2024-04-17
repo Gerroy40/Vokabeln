@@ -4,7 +4,7 @@ import re
 
 REPO_PATH = "./Dateien"  
 # Pfad anpassen!
-OBSIDIAN_PATH = "C:/Users/arima/Documents/Atamagaii/Anki" # Change this to the path of your folder
+OBSIDIAN_PATH = "C:/Users/User/Kioku/Anki" # Change this to the path of your folder
 
 # summary: Takes a path to a .md file and parses all contained vocabulary cards (Anki format required!)
 # filepath: Path to the .md file to parse
@@ -99,24 +99,19 @@ def main():
                         break
 
                     # Only front is equal - update the back
-                    # 1. Find index of first line of front
-                    # 2. Calculate start and end ob back based on index
-                    # 3. Exchange section and write to file
                     if (rcard[1] == ocard[1]):
                         print("The back is different - overwrite it")
-                        # Read in the file
                         with open(obsidian_fp, 'r', encoding='utf-8') as fp:
-                            data = fp.readlines()
+                            data = fp.read()
 
-                        # Find the front to know where the back starts
-                        front_lines = ocard[1].strip().split('\n')
-                        back_lines = ocard[2].strip().split('\n')
-                        for index, line in enumerate(data):
-                            line = line.strip()
-                            if (line == front_lines[0].strip()):
-                                data[index+len(front_lines):index+len(front_lines)+len(back_lines)] = [rcard[2]]
+                        # Regex pattern using lookahead to keep delimiters and exclude rcard[1] from the match
+                        pattern = re.compile(rf"{re.escape(rcard[1])}(.*?)(?=Tags:|END|<!--ID|$)", re.DOTALL)
+                        # Replacement operation - also overwrites the unchanged front
+                        replacement = rf"{rcard[1]}{rcard[2]}" 
+                        data = re.sub(pattern, replacement, data)
+
                         with open(obsidian_fp, 'w', encoding='utf-8') as fp:
-                            fp.write(''.join(data))
+                            fp.write(data)
                         found = True
                         break
 
@@ -125,15 +120,22 @@ def main():
                         print("The front is different - overwrite it")
                         # Read in the file
                         with open(obsidian_fp, 'r', encoding='utf-8') as fp:
-                            data = fp.readlines()
-                        front_lines = ocard[1].strip().split('\n')
-                        back_lines = ocard[2].strip().split('\n')
-                        for index, line in enumerate(data):
-                            line = line.strip()
-                            if (line == back_lines[0].strip()):
-                                data[index-len(front_lines):index] = [rcard[1]]
+                            data = fp.read()
+
+                        # Best solution I found is to revert the string before matching -> PURE MADNESS
+                        reverse_data = data[::-1]
+                        match = rcard[2][::-1]
+                        replacement = rf"{match}{rcard[1][::-1]}"
+                        pattern = re.compile(rf"{re.escape(match)}(.*?:etiesredroV)", re.DOTALL)
+
+                        # Replace the corresponding pattern
+                        reverse_data = re.sub(pattern, replacement, reverse_data)
+
+                        # Reverse back..
+                        data = reverse_data[::-1]
+
                         with open(obsidian_fp, 'w', encoding='utf-8') as fp:
-                            fp.write(''.join(data))
+                            fp.write(data)
 
                         found = True
                         break
